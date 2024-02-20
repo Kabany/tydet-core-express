@@ -1,6 +1,7 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
+    "esModuleInterop": true,
      "noImplicitAny": false,
      "noEmitOnError": true,
      "removeComments": false,
