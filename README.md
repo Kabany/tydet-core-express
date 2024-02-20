@@ -19,33 +19,16 @@ It is required to install [TyDeT Core][tydet-core] to use this module.
 
 ```js
 import { Context } from 'tydet-core';
-import { Logger, LoggerMode, LogLevel } from 'tydet-core-logger';
+import { Express, RequestExtended, SuccessResponse } from 'tydet-core-express';
+
+let router = express.Router()
+router.get("/test", async (req: RequestExtended, res: express.Response) => {
+  return res.json(SuccessResponse(req, {ok: 1}, "Ok!"))
+})
 
 let app = new Context()
-let logger = new Logger([
-  {
-    mode: LoggerMode.CONSOLE,
-    min: LogLevel.INFO
-  },
-  {
-    mode: LoggerMode.FILE,
-    path: "./logs/today.log"
-    max: LogLevel.SUCCESS
-  },
-  {
-    mode: LoggerMode.WEBHOOK,
-    endpoint: "https://mywebhookserver.com/logs",
-    only: [LogLevel.ERROR, LogLevel.WARNING]
-  }
-])
-app.mountService("logger", logger)
-
-logger.debug("This is a debug message")
-logger.info("This is an info message")
-logger.success("This is a success message")
-logger.failure("This is a failure message")
-logger.warn("This is a warning message")
-logger.error("This is an error message")
+let express = new Express({host: 'localhost', port: 3000}, [router])
+await app.mountService("express", express)
 ```
 
 Check the [docs][docs] for more details about the service.

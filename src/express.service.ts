@@ -20,10 +20,14 @@ interface ExpressServerConfiguration {
   host: string
 }
 
-export type ExpressCallback = (request: {url: string, method: string, body?: any, query?: any, headers?: any}, response: any, service: Express, context: Context) => void
-export type Express404Callback = (request: {url: string, method: string, body?: any, query?: any, headers?: any}, service: Express, context: Context) => {error: string, code: number}
-//export type ExpressErrorCallback = (request: {url: string, method: string, body?: any, query?: any, headers?: any}, error: any, service: Express, context: Context) => {error: string, code: number}
-export type ExpressListeningCallback = (host: string, port: number) => void
+interface RequestInfo {
+  url: string, method: string, body?: any, query?: any, headers?: any, path?: string
+}
+
+export type ExpressCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
+export type Express404Callback = (request: RequestInfo, service: Express, context: Context) => {error: string, code: number}
+//export type ExpressErrorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {error: string, code: number}
+export type ExpressListeningCallback = (host: string, port: number, service: Express, context: Context) => void
 
 export class Express extends Service {
   server: express.Express
@@ -79,7 +83,7 @@ export class Express extends Service {
     //});
     // listen port
     this.instance = this.server.listen({port: this.params.get(PORT) as number, host: this.params.get(HOST)});
-    if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number)
+    if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
     super.onMount()
   }
 
@@ -100,7 +104,7 @@ export function SuccessResponse(req: RequestExtended, data?: any, message?: stri
     message
   }
   if (req.service?.onSuccess) {
-    req.service.onSuccess({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
+    req.service.onSuccess({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
   }
   return response
 }
@@ -114,7 +118,7 @@ export function FailureResponse(req: RequestExtended, code: number, message: str
     error
   }
   if (req.service?.onFailure) {
-    req.service.onFailure({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
+    req.service.onFailure({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
   }
   return response
 }
