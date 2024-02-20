@@ -43,7 +43,7 @@ Check the [docs][docs] for more details about the service.
 
 ## Contributing
 
-We'd love for you to contribute to TyAPI Core Logger and help make it even better than it is today! Find out how you can contribute [here][contribute].
+We'd love for you to contribute to TyAPI Core Express and help make it even better than it is today! Find out how you can contribute [here][contribute].
 
 
 
