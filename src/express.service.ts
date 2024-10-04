@@ -70,10 +70,11 @@ export class Express extends Service {
       this.server.use(route);
     }
     // set 404
-    this.server.use((req: RequestExtended, res: express.Response) => {
+    this.server.use((req: RequestExtended, res: express.Response, next: express.NextFunction) => {
       let url = req.protocol + '://' + req.get('host') + req.originalUrl;
       let data = this.on404 ? this.on404({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, this, this.context) : {error: "Page not found", code: 0}
-      return res.status(StatusCodes.NOT_FOUND).json(FailureResponse(req, data.code, data.error));
+      res.status(StatusCodes.NOT_FOUND).json(FailureResponse(req, data.code, data.error));
+      return;
     });
     // handle errors
     //this.server.use((err: any, req: RequestExtended, res: express.Response, _next: express.NextFunction) => {

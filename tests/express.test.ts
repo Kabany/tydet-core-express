@@ -5,7 +5,8 @@ import { Express, RequestExtended, SuccessResponse } from "../src/express.servic
 
 let router = express.Router()
 router.get("/test", async (req: RequestExtended, res: express.Response) => {
-  return res.json(SuccessResponse(req, {ok: 1}, "Ok!"))
+  res.json(SuccessResponse(req, {ok: 1}, "Ok!"))
+  return
 })
 
 describe("Express Service", () => {
