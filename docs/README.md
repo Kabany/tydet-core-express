@@ -30,7 +30,11 @@ The input arguments are required and will define the configuration and the list 
 let express = new Express({host: 'localhost', port: 3000}, [router])
 ```
 
-The first argument (`ExpressServerConfiguration`) define the server `host` and `port`. Normaly Node JS servers use `localhost` as the host and `3000` as the port.
+The first argument (`ExpressServerConfiguration`) is an object with the following parameters:
+- **host**: The server host name. By default it's `localhost`.
+- **port**: The server port to listen. By default it's `3000`.
+- **cors**: The CORS configuration options for ingress allow rules. For more information go to the [CORS Library documentation](https://github.com/expressjs/cors#readme).
+- **helmet**: The Helmet configuration options for security rules. For more information go to the [Helmet Library documentation](https://helmetjs.github.io/). (This is loaded before CORS).
 
 The second argument is an array of routes (`express.Router`). In the express Router you can define all middlewares and endpoints for your server.
 
@@ -102,9 +106,9 @@ console.log(FailureResponse(req, 10, "Some errors were found!", {parameter: "req
 
 The are some callbacks that you can define on the configuration of this service. The callbacks are called for the following events:
 
-#### `onSuccess(request: RequestInfo, response: any, service: Express, context: Context) => void`
+#### `onSuccessResponse(request: RequestInfo, response: any, service: Express, context: Context) => void`
 
-- **req**: Information recieved about the request.
+- **request**: Information recieved about the request. (url: string, method: string, body?: any, query?: any, headers?: any, path?: string)
 - **response**: Data that will be sent as response.
 - **service**: The Express Service.
 - **context**: The TyDeT Context.
@@ -113,44 +117,65 @@ This method is called each time you use the `SuccessResponse()` method.
 
 ```js
 let express = new Express({host: 'localhost', port: 3000}, [router])
-express.onSuccess = (request, response, service, context) {
+express.onSuccessResponse = (request, response, service, context) {
   console.log("Success", request.method, request.url, response) // You can use the TyDeT Logger or any custom logger.
 }
 ```
 
-#### `onFailure(request: RequestInfo, response: any, service: Express, context: Context) => void`
+#### `onFailedResponse(request: RequestInfo, response: any, service: Express, context: Context, error?: any, errorMessage?: string) => void`
 
-- **req**: Information recieved about the request.
+- **request**: Information recieved about the request. (url: string, method: string, body?: any, query?: any, headers?: any, path?: string)
 - **response**: Data that will be sent as response.
 - **service**: The Express Service.
 - **context**: The TyDeT Context.
+- **error**: (Optional) An object with an error sent from the endpoint controller for internal use, for example to log the error in another service.
+- **errorMessage**: (Optional) A string message sent from the endpoint controller for internal use, for example to log a message in another service.
 
 This method is called each time you use the `FailureResponse()` method.
 
 ```js
 let express = new Express({host: 'localhost', port: 3000}, [router])
-express.onFailure = (request, response, service, context) {
-  console.log("Success", request.method, request.url, response) // You can use the TyDeT Logger or any custom logger.
+express.onFailedResponse = (request, response, service, context, error, errorMessage) {
+  console.log("Failure", request.method, request.url, response, error, errorMessage) // You can use the TyDeT Logger or any custom logger.
 }
 ```
 
-#### `on404(request: RequestInfo, service: Express, context: Context) => {code: number, error: message}`
+#### `on404Interceptor(request: RequestInfo, service: Express, context: Context) => {code: number, message: string}`
 
-- **req**: Information recieved about the request.
+- **request**: Information recieved about the request. (url: string, method: string, body?: any, query?: any, headers?: any, path?: string)
 - **service**: The Express Service.
 - **context**: The TyDeT Context.
 
-This callback, unlike the previous ones, you can customize the payload to send, so its required to send the error `code` and the erorr `message`:
+This callback, unlike the previous ones, you can customize the payload to send, so its required to send the error `code` and the error `message`:
 
 ```js
 let express = new Express({host: 'localhost', port: 3000}, [router])
-express.on404 = (request, service, context) {
+express.on404Interceptor = (request, service, context) {
   return {code: 404, message: "This is a 404 error".}
 }
 ```
 
-It is important to known that the error `code` is not the HTTP Status code.
-Also, because a response is sent, the `onFailure` method will be called after the `on404`.
+It is important to known that the error `code` is not the HTTP Status code but in the response body.
+Also, because a response is sent, the `onFailedResponse` method will be called after the `on404Interceptor`.
+
+#### `onErrorInterceptor(request: RequestInfo, error: any, service: Express, context: Context) => {code: number, message?: string, error?: any}`
+
+- **request**: Information recieved about the request. (url: string, method: string, body?: any, query?: any, headers?: any, path?: string)
+- **service**: The Express Service.
+- **context**: The TyDeT Context.
+
+
+This callback, unlike the previous ones, you can customize the payload to send, so its required to send the error `code`, the error `message` and a custom `error` object:
+
+```js
+let express = new Express({host: 'localhost', port: 3000}, [router])
+express.onErrorInterceptor = (request, error, service, context) {
+  return {code: 50, message: error.message, {error1: "custom error field"}}
+}
+```
+
+It is important to known that the error `code` is not the HTTP Status code but in the response body.
+Also, because a response is sent, the `onFailedResponse` method will be called after the `onErrorInterceptor`.
 
 #### `onReady(host: string, port: number, service: Express, context: Context) => void`
 

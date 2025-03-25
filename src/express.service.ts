@@ -1,7 +1,7 @@
 import express from "express"
 import * as bodyParser from "body-parser";
-import helmet from "helmet";
-import cors from "cors";
+import helmet, { HelmetOptions } from "helmet";
+import cors, { CorsOptions } from "cors";
 import { StatusCodes } from "http-status-codes";
 
 import { Context, Service } from "tydet-core";
@@ -9,6 +9,8 @@ import { Context, Service } from "tydet-core";
 const ROUTES = "ROUTES";
 const PORT = "PORT";
 const HOST = "HOST";
+const CORS = "CORS";
+const HELMET = "HELMET";
 
 export interface RequestExtended extends express.Request {
   context?: Context
@@ -16,34 +18,39 @@ export interface RequestExtended extends express.Request {
 }
 
 interface ExpressServerConfiguration {
-  port: number,
-  host: string
+  port?: number,
+  host?: string,
+  cors?: CorsOptions
+  helmet?: HelmetOptions
 }
 
 interface RequestInfo {
   url: string, method: string, body?: any, query?: any, headers?: any, path?: string
 }
 
-export type ExpressCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
-export type Express404Callback = (request: RequestInfo, service: Express, context: Context) => {error: string, code: number}
-//export type ExpressErrorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {error: string, code: number}
+export type ExpressResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
+export type ExpressFailedResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context, error?: any, errorMessage?: string) => void
+export type Express404InterceptorCallback = (request: RequestInfo, service: Express, context: Context) => {message: string, code: number}
+export type ExpressErrorInterceptorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {message?: string, code: number, error?: any}
 export type ExpressListeningCallback = (host: string, port: number, service: Express, context: Context) => void
 
 export class Express extends Service {
   server: express.Express
   private instance: any
 
-  onSuccess: ExpressCallback
-  onFailure: ExpressCallback
-  on404: Express404Callback
-  //onError: ExpressErrorCallback
+  onSuccessResponse: ExpressResponseCallback
+  onFailedResponse: ExpressFailedResponseCallback
+  on404Interceptor: Express404InterceptorCallback
+  onErrorInterceptor: ExpressErrorInterceptorCallback
   onReady: ExpressListeningCallback
 
   constructor(configuration: ExpressServerConfiguration, routes: express.Router[]) {
     let params = new Map()
     params.set(ROUTES, routes);
-    params.set(PORT, configuration.port);
-    params.set(HOST, configuration.host);
+    params.set(PORT, configuration.port || 3000);
+    params.set(HOST, configuration.host || "localhost");
+    params.set(CORS, configuration.cors);
+    params.set(HELMET, configuration.helmet);
     super(params)
   }
 
@@ -52,8 +59,16 @@ export class Express extends Service {
     this.server.disable('x-powered-by');
     this.server.use(bodyParser.json() as express.RequestHandler);
     this.server.use(bodyParser.urlencoded({extended: true}) as express.RequestHandler);
-    this.server.use(helmet());
-    this.server.use(cors());
+    let helmetOpts: HelmetOptions = {}
+    if (this.params.get(HELMET) != null) {
+      helmetOpts = this.params.get(HELMET) as HelmetOptions
+    }
+    this.server.use(helmet(helmetOpts));
+    let corsOpts: CorsOptions = {}
+    if (this.params.get(CORS) != null) {
+      corsOpts = this.params.get(CORS) as CorsOptions
+    }
+    this.server.use(cors(corsOpts));
     super.beforeMount(context);
   }
 
@@ -72,16 +87,16 @@ export class Express extends Service {
     // set 404
     this.server.use((req: RequestExtended, res: express.Response, next: express.NextFunction) => {
       let url = req.protocol + '://' + req.get('host') + req.originalUrl;
-      let data = this.on404 ? this.on404({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, this, this.context) : {error: "Page not found", code: 0}
-      res.status(StatusCodes.NOT_FOUND).json(FailureResponse(req, data.code, data.error));
+      let data = this.on404Interceptor ? this.on404Interceptor({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, this, this.context) : {message: "Page not found", code: 0}
+      res.status(StatusCodes.NOT_FOUND).json(FailureResponse(req, data.code, data.message));
       return;
     });
     // handle errors
-    //this.server.use((err: any, req: RequestExtended, res: express.Response, _next: express.NextFunction) => {
-    //  let url = req.protocol + '://' + req.get('host') + req.originalUrl;
-    //  let data = this.onError ? this.onError({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, err, this, this.context) : {error: "Whops! Something went wrong!", code: -50}
-    //  return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(FailureResponse(req, data.code, data.error))
-    //});
+    this.server.use((err: any, req: RequestExtended, res: express.Response, _next: express.NextFunction): any => {
+      let url = req.protocol + '://' + req.get('host') + req.originalUrl;
+      let data = this.onErrorInterceptor ? this.onErrorInterceptor({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, err, this, this.context) : {message: "Whops! Something went wrong!", code: -50}
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(FailureResponse(req, data.code, data.message, data.error))
+    });
     // listen port
     this.instance = this.server.listen({port: this.params.get(PORT) as number, host: this.params.get(HOST)});
     if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
@@ -104,22 +119,22 @@ export function SuccessResponse(req: RequestExtended, data?: any, message?: stri
     data,
     message
   }
-  if (req.service?.onSuccess) {
-    req.service.onSuccess({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
+  if (req.service?.onSuccessResponse) {
+    req.service.onSuccessResponse({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
   }
   return response
 }
 
-export function FailureResponse(req: RequestExtended, code: number, message: string, error?: any) {
+export function FailureResponse(req: RequestExtended, code: number, message: string, errorBody?: any, errorInt?: any, errorIntMessage?: string) {
   let url = req.protocol + '://' + req.get('host') + req.originalUrl;
   let response = {
     success: false,
     code,
     message,
-    error
+    errorBody
   }
-  if (req.service?.onFailure) {
-    req.service.onFailure({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
+  if (req.service?.onFailedResponse) {
+    req.service.onFailedResponse({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context, errorInt, errorIntMessage)
   }
   return response
 }

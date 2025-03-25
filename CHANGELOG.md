@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.1.0] 2025-03-25
+### Added
+* Rename the callback methods onSuccessResponse, onFailedResponse, on404Interceptor and onErrorInterceptor
+* Add an error handler endpoint
+* Add configuration options for the CORS library
+* Add configuration options for the Helmet library
+
 ## [v1.0.1] 2024-10-04
 * Update 'typescript', 'supertest', 'express', 'body-parser', 'cors', 'helmet' and 'tydet-core' repositories.
 
