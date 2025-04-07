@@ -34,7 +34,7 @@ describe("Express Service", () => {
     }
     express.onErrorInterceptor = (request, error, service, context) => {
       console.log("error interceptor works", request, error)
-      return {code: -51, message: error.message}
+      return {code: -51, message: error.message, error}
     }
     await app.mountService("express", express)
   })
@@ -63,6 +63,6 @@ describe("Express Service", () => {
   })
 
   afterAll(async () => {
-    await app.unmountServices()
+    await app.ejectAllServices()
   })
 })

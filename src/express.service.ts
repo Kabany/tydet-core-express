@@ -55,6 +55,38 @@ export class Express extends Service {
   }
 
   async beforeMount(context: Context) {
+    await this.createServer()
+    super.beforeMount(context);
+  }
+
+  async onMount() {
+    await this.addEndpoints()
+    super.onMount()
+  }
+
+  async afterMount() {
+    if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
+    super.afterMount()
+  }
+
+  async beforeReset() {
+    await this.closeServer()
+  }
+
+  async onReset() {
+    await this.createServer()
+    await this.addEndpoints()
+  }
+
+  async afterReset() {
+    if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
+  }
+
+  async onEject() {
+    await this.closeServer()
+  }
+
+  private async createServer() {
     this.server = express();
     this.server.disable('x-powered-by');
     this.server.use(bodyParser.json() as express.RequestHandler);
@@ -69,10 +101,9 @@ export class Express extends Service {
       corsOpts = this.params.get(CORS) as CorsOptions
     }
     this.server.use(cors(corsOpts));
-    super.beforeMount(context);
   }
 
-  async onMount() {
+  private async addEndpoints() {
     // set service parameter on request
     this.server.use((req: RequestExtended, _res: express.Response, next: express.NextFunction) => {
       req.context = this.context;
@@ -99,11 +130,9 @@ export class Express extends Service {
     });
     // listen port
     this.instance = this.server.listen({port: this.params.get(PORT) as number, host: this.params.get(HOST)});
-    if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
-    super.onMount()
   }
 
-  async onUnmount() {
+  private async closeServer() {
     await (new Promise<void>((resolve, reject) => {
       this.instance?.close(() => {
         resolve()
