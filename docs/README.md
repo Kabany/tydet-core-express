@@ -200,11 +200,11 @@ express.onReady = (host, port, service, context) => {
 - **service**: The Express Service.
 - **context**: The TyDeT Context.
 
-This callback is executed when the express instance listener is ready.
+This callback is executed when the express instance is closing.
 
 ```js
 let express = new Express({host: 'localhost', port: 3000}, [router])
-express.onReady = (host, port, service, context) => {
-  console.log(`Server ${host} is listening HTTP requests on the port ${port}`) // You can use the TyDeT Logger or any custom logger.
+express.onDisconnected = (host, port, service, context) => {
+  console.log(`Server ${host} on the port ${port} is now closed`) // You can use the TyDeT Logger or any custom logger.
 }
 ```
