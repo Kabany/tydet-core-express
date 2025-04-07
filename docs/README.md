@@ -179,7 +179,23 @@ Also, because a response is sent, the `onFailedResponse` method will be called a
 
 #### `onReady(host: string, port: number, service: Express, context: Context) => void`
 
-- **req**: The host defined in the Express configurations
+- **host**: The host defined in the Express configurations
+- **port**: The port defined in the Express configurations
+- **service**: The Express Service.
+- **context**: The TyDeT Context.
+
+This callback is executed when the express instance listener is ready.
+
+```js
+let express = new Express({host: 'localhost', port: 3000}, [router])
+express.onReady = (host, port, service, context) => {
+  console.log(`Server ${host} is listening HTTP requests on the port ${port}`) // You can use the TyDeT Logger or any custom logger.
+}
+```
+
+#### `onDisconnected(host: string, port: number, service: Express, context: Context) => void`
+
+- **host**: The host defined in the Express configurations
 - **port**: The port defined in the Express configurations
 - **service**: The Express Service.
 - **context**: The TyDeT Context.

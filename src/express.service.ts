@@ -32,7 +32,7 @@ export type ExpressResponseCallback = (request: RequestInfo, response: any, serv
 export type ExpressFailedResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context, error?: any, errorMessage?: string) => void
 export type Express404InterceptorCallback = (request: RequestInfo, service: Express, context: Context) => {message: string, code: number}
 export type ExpressErrorInterceptorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {message?: string, code: number, error?: any}
-export type ExpressListeningCallback = (host: string, port: number, service: Express, context: Context) => void
+export type ExpressConnectionCallback = (host: string, port: number, service: Express, context: Context) => void
 
 export class Express extends Service {
   server: express.Express
@@ -42,7 +42,8 @@ export class Express extends Service {
   onFailedResponse: ExpressFailedResponseCallback
   on404Interceptor: Express404InterceptorCallback
   onErrorInterceptor: ExpressErrorInterceptorCallback
-  onReady: ExpressListeningCallback
+  onReady: ExpressConnectionCallback
+  onDisconnected: ExpressConnectionCallback
 
   constructor(configuration: ExpressServerConfiguration, routes: express.Router[]) {
     let params = new Map()
@@ -71,19 +72,29 @@ export class Express extends Service {
 
   async beforeReset() {
     await this.closeServer()
+    if (this.onDisconnected) this.onDisconnected(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
+    await super.beforeReset()
   }
 
   async onReset() {
     await this.createServer()
     await this.addEndpoints()
+    await super.onReset()
   }
 
   async afterReset() {
     if (this.onReady) this.onReady(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
+    await super.afterReset()
   }
 
   async onEject() {
     await this.closeServer()
+    await super.onEject()
+  }
+
+  async afterEject() {
+    if (this.onDisconnected) this.onDisconnected(this.params.get(HOST), this.params.get(PORT) as number, this, this.context)
+    await super.afterEject()
   }
 
   private async createServer() {
