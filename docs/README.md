@@ -179,8 +179,8 @@ Also, because a response is sent, the `onFailedResponse` method will be called a
 
 #### `onReady(host: string, port: number, service: Express, context: Context) => void`
 
-- **req**: Express instance server host (set on the Express configuration).
-- **port**: Express instance server port (set on the Express configuration).
+- **req**: The host defined in the Express configurations
+- **port**: The port defined in the Express configurations
 - **service**: The Express Service.
 - **context**: The TyDeT Context.
 
