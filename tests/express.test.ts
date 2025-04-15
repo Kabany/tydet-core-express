@@ -2,6 +2,7 @@ import supertest from "supertest"
 import express from "express"
 import { Context, CoreError } from "tydet-core"
 import { Express, FailureResponse, RequestExtended, SuccessResponse } from "../src/express.service"
+import { StatusCodes } from "http-status-codes"
 
 let router = express.Router()
 router.get("/test", async (req: RequestExtended, res: express.Response) => {
@@ -34,7 +35,7 @@ describe("Express Service", () => {
     }
     express.onErrorInterceptor = (request, error, service, context) => {
       console.log("error interceptor works", request, error)
-      return {code: -51, message: error.message, error}
+      return {code: -51, message: error.message, error, statusCode: StatusCodes.INTERNAL_SERVER_ERROR}
     }
     await app.mountService("express", express)
   })

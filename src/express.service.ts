@@ -5,6 +5,7 @@ import cors, { CorsOptions } from "cors";
 import { StatusCodes } from "http-status-codes";
 
 import { Context, Service } from "tydet-core";
+import { ExpressFailedResponse } from "./express.error";
 
 const ROUTES = "ROUTES";
 const PORT = "PORT";
@@ -29,9 +30,9 @@ interface RequestInfo {
 }
 
 export type ExpressResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
-export type ExpressFailedResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context, error?: any, errorMessage?: string) => void
+export type ExpressFailedResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
 export type Express404InterceptorCallback = (request: RequestInfo, service: Express, context: Context) => {message: string, code: number}
-export type ExpressErrorInterceptorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {message?: string, code: number, error?: any}
+export type ExpressErrorInterceptorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {message?: string, code: number, error?: any, statusCode: number}
 export type ExpressConnectionCallback = (host: string, port: number, service: Express, context: Context) => void
 
 export class Express extends Service {
@@ -136,8 +137,8 @@ export class Express extends Service {
     // handle errors
     this.server.use((err: any, req: RequestExtended, res: express.Response, _next: express.NextFunction): any => {
       let url = req.protocol + '://' + req.get('host') + req.originalUrl;
-      let data = this.onErrorInterceptor ? this.onErrorInterceptor({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, err, this, this.context) : {message: "Whops! Something went wrong!", code: -50}
-      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(FailureResponse(req, data.code, data.message, data.error))
+      let data = this.onErrorInterceptor ? this.onErrorInterceptor({url, method: req.method, body: req.body, query: req.query, headers: req.headers}, err, this, this.context) : {message: "Whops! Something went wrong!", code: -50, statusCode: StatusCodes.INTERNAL_SERVER_ERROR}
+      return res.status(data.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json(FailureResponse(req, data.code, data.message, data.error))
     });
     // listen port
     this.instance = this.server.listen({port: this.params.get(PORT) as number, host: this.params.get(HOST)});
@@ -165,7 +166,7 @@ export function SuccessResponse(req: RequestExtended, data?: any, message?: stri
   return response
 }
 
-export function FailureResponse(req: RequestExtended, code: number, message: string, errorBody?: any, errorInt?: any, errorIntMessage?: string) {
+export function FailureResponse(req: RequestExtended, code: number, message: string, errorBody?: any, error?: ExpressFailedResponse) {
   let url = req.protocol + '://' + req.get('host') + req.originalUrl;
   let response = {
     success: false,
@@ -174,7 +175,7 @@ export function FailureResponse(req: RequestExtended, code: number, message: str
     errorBody
   }
   if (req.service?.onFailedResponse) {
-    req.service.onFailedResponse({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context, errorInt, errorIntMessage)
+    req.service.onFailedResponse({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
   }
   return response
 }
