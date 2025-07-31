@@ -30,7 +30,7 @@ interface RequestInfo {
 }
 
 export type ExpressResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
-export type ExpressFailedResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context) => void
+export type ExpressFailedResponseCallback = (request: RequestInfo, response: any, service: Express, context: Context, error?: ExpressFailedResponse) => void
 export type Express404InterceptorCallback = (request: RequestInfo, service: Express, context: Context) => {message: string, code: number}
 export type ExpressErrorInterceptorCallback = (request: RequestInfo, error: any, service: Express, context: Context) => {message?: string, code: number, error?: any, statusCode: number}
 export type ExpressConnectionCallback = (host: string, port: number, service: Express, context: Context) => void
@@ -175,7 +175,7 @@ export function FailureResponse(req: RequestExtended, code: number, message: str
     errorBody
   }
   if (req.service?.onFailedResponse) {
-    req.service.onFailedResponse({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context)
+    req.service.onFailedResponse({url, path: req.originalUrl, method: req.method, body: req.body, query: req.query, headers: req.headers}, response, req.service, req.service.context, error)
   }
   return response
 }

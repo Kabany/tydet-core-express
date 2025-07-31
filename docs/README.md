@@ -122,14 +122,13 @@ express.onSuccessResponse = (request, response, service, context) {
 }
 ```
 
-#### `onFailedResponse(request: RequestInfo, response: any, service: Express, context: Context, error?: any, errorMessage?: string) => void`
+#### `onFailedResponse(request: RequestInfo, response: any, service: Express, context: Context, error?: ExpressFailedResponse) => void`
 
 - **request**: Information recieved about the request. (url: string, method: string, body?: any, query?: any, headers?: any, path?: string)
 - **response**: Data that will be sent as response.
 - **service**: The Express Service.
 - **context**: The TyDeT Context.
 - **error**: (Optional) An object with an error sent from the endpoint controller for internal use, for example to log the error in another service.
-- **errorMessage**: (Optional) A string message sent from the endpoint controller for internal use, for example to log a message in another service.
 
 This method is called each time you use the `FailureResponse()` method.
 
