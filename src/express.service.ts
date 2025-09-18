@@ -3,6 +3,7 @@ import * as bodyParser from "body-parser";
 import helmet, { HelmetOptions } from "helmet";
 import cors, { CorsOptions } from "cors";
 import { StatusCodes } from "http-status-codes";
+import cookieParser from "cookie-parser"
 
 import { Context, Service } from "tydet-core";
 import { ExpressFailedResponse } from "./express.error";
@@ -12,20 +13,26 @@ const PORT = "PORT";
 const HOST = "HOST";
 const CORS = "CORS";
 const HELMET = "HELMET";
+const COOKIE = "COOKIE";
 
 export interface RequestExtended extends express.Request {
   context?: Context
   service?: Express
 }
 
-interface ExpressServerConfiguration {
+export interface ExpressServerConfiguration {
   port?: number,
   host?: string,
   cors?: CorsOptions
   helmet?: HelmetOptions
+  cookie?: CookieOptions
 }
 
-interface RequestInfo {
+export interface CookieOptions extends cookieParser.CookieParseOptions {
+  secret: string
+}
+
+export interface RequestInfo {
   url: string, method: string, body?: any, query?: any, headers?: any, path?: string
 }
 
@@ -101,6 +108,11 @@ export class Express extends Service {
   private async createServer() {
     this.server = express();
     this.server.disable('x-powered-by');
+    let cookieOpts: CookieOptions = {secret: ""}
+    if (this.params.get(COOKIE) != null) {
+      cookieOpts = this.params.get(COOKIE)
+    }
+    this.server.use(cookieParser(cookieOpts.secret, cookieOpts) as express.RequestHandler)
     this.server.use(bodyParser.json() as express.RequestHandler);
     this.server.use(bodyParser.urlencoded({extended: true}) as express.RequestHandler);
     let helmetOpts: HelmetOptions = {}
