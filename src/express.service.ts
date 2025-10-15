@@ -60,6 +60,7 @@ export class Express extends Service {
     params.set(HOST, configuration.host || "localhost");
     params.set(CORS, configuration.cors);
     params.set(HELMET, configuration.helmet);
+    params.set(COOKIE, configuration.cookie)
     super(params)
   }
 
